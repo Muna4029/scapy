@@ -11,7 +11,16 @@
 
 = Load server util functions
 
+import warnings
 import sys, os, re, time, subprocess
+
+# Ignore CryptographyDeprecationWarning for deprecated FFDH (finite field Diffie-Hellman)
+from cryptography.utils import CryptographyDeprecationWarning
+warnings.filterwarnings(
+    "ignore",
+    message="Diffie-Hellman over finite fields",
+    category=CryptographyDeprecationWarning,
+)
 from queue import Queue
 import threading
 
