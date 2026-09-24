@@ -27,7 +27,7 @@ It provides a few utility functions such as :py:attr:`dev_from_networkname() <sc
     >>> conf.ifaces
     Source  Index  Name  MAC                IPv4          IPv6
     sys     1      lo    00:00:00:00:00:00  127.0.0.1     ::1
-    sys     2      eth0  Microsof:12:cb:ef  10.0.0.5  fe80::10a:2bef:dc12:afae
+    sys     2      eth0  Microsoft:12:cb:ef  10.0.0.5  fe80::10a:2bef:dc12:afae
     >>> conf.ifaces.dev_from_index(2)
     <NetworkInterface eth0 [UP+BROADCAST+RUNNING+SLAVE]>
 
@@ -57,7 +57,7 @@ Scapy supports sniffing on `Wireshark's extcap <https://www.wireshark.org/docs/m
     wifidump     100    Wi-Fi remote capture                     wifidump
     Source  Index  Name  MAC                IPv4          IPv6
     sys     1      lo    00:00:00:00:00:00  127.0.0.1     ::1
-    sys     2      eth0  Microsof:12:cb:ef  10.0.0.5  fe80::10a:2bef:dc12:afae
+    sys     2      eth0  Microsoft:12:cb:ef  10.0.0.5  fe80::10a:2bef:dc12:afae
 
 
 Here's an example of how to use `sshdump <https://www.wireshark.org/docs/man-pages/sshdump.html>`_. As you can see you can pass arguments that are properly converted:

@@ -3031,6 +3031,8 @@ class FlagValue(object):
         if isinstance(value, list):
             y = 0
             for i in value:
+                # Convert dashes to underscores for backward compatibility
+                i = i.replace('-', '_')
                 y |= 1 << self.names.index(i)
             value = y
         return int(value)
