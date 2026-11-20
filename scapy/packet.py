@@ -124,9 +124,9 @@ class Packet(
         return cls(import_hexcap())
 
     @classmethod
-    def upper_bonds(self):
+    def upper_bonds(cls):
         # type: () -> None
-        for fval, upper in self.payload_guess:
+        for fval, upper in cls.payload_guess:
             print(
                 "%-20s  %s" % (
                     upper.__name__,
@@ -173,6 +173,8 @@ class Packet(
         if isinstance(_pkt, bytearray):
             _pkt = bytes(_pkt)
         self.original = _pkt
+        if not self.payload:
+            raise ValueError('Payload cannot be None or empty')
         self.explicit = 0
         self.raw_packet_cache = None  # type: Optional[bytes]
         self.raw_packet_cache_fields = None  # type: Optional[Dict[str, Any]]  # noqa: E501
@@ -195,6 +197,8 @@ class Packet(
                 value = fields.pop(fname)
             except KeyError:
                 continue
+            if fname not in self.fields:
+                raise ValueError(f'Field {fname} not found in fields')
             self.fields[fname] = value if isinstance(value, RawVal) else \
                 self.get_field(fname).any2i(self, value)
         # The remaining fields are unknown
@@ -408,6 +412,8 @@ class Packet(
                 self.payload = conf.raw_layer(load=bytes_encode(payload))
             else:
                 raise TypeError("payload must be 'Packet', 'bytes', 'str', 'bytearray', or 'memoryview', not [%s]" % repr(payload))  # noqa: E501
+        if self.payload is None:
+            raise ValueError('Payload cannot be None')
 
     def remove_payload(self):
         # type: () -> None
@@ -502,7 +508,7 @@ class Packet(
             return self.payload.__getattr__(attr)
         if fld is not None:
             return v if isinstance(v, RawVal) else fld.i2h(self, v)
-        return v
+        raise AttributeError(f'Attribute {attr} not found')
 
     def setfieldval(self, attr, val):
         # type: (str, Any) -> None
@@ -510,6 +516,8 @@ class Packet(
             attr = self._resolve_alias(attr)
         if attr in self.default_fields:
             fld = self.get_field(attr)
+        else:
+            raise ValueError(f'Field {attr} not found in default fields')
             if fld is None:
                 any2i = lambda x, y: y  # type: Callable[..., Any]
             else:
@@ -768,7 +776,9 @@ class Packet(
             pkt = t(pkt)
         pay = self.do_build_payload()
         if self.raw_packet_cache is None:
-            return self.post_build(pkt, pay)
+            if not isinstance(pkt, bytes) or not isinstance(pay, bytes):
+            raise ValueError('pkt and pay must be of type bytes')
+        return self.post_build(pkt, pay)
         else:
             return pkt + pay
 
@@ -793,15 +803,18 @@ class Packet(
         """
         DEV: called right after the current layer is build.
 
-        :param str pkt: the current packet (build by self_build function)
-        :param str pay: the packet payload (build by do_build_payload function)
-        :return: a string of the packet with the payload
+        :param bytes pkt: the current packet (build by self_build function)
+        :param bytes pay: the packet payload (build by do_build_payload function)
+        :return: a bytes of the packet with the payload
         """
         return pkt + pay
 
     def build_done(self, p):
         # type: (bytes) -> bytes
-        return self.payload.build_done(p)
+        result = self.payload.build_done(p)
+        if not isinstance(result, bytes):
+            raise ValueError('build_done must return bytes')
+        return result
 
     def do_build_ps(self):
         # type: () -> Tuple[bytes, List[Tuple[Packet, List[Tuple[Field[Any, Any], str, bytes]]]]]  # noqa: E501
@@ -820,6 +833,8 @@ class Packet(
             pl.append((f, f.i2repr(self, self.getfieldval(f.name)), r))
 
         pkt, lst = self.payload.build_ps(internal=1)
+        if not isinstance(pkt, bytes):
+            raise ValueError('build_ps must return bytes')
         p += pkt
         lst.append((self, pl))
 
@@ -998,8 +1013,8 @@ class Packet(
                             cnx = pyx.connector.curve(bxvt, bxdt, absangle1=0, absangle2=-90)  # noqa: E501
                         else:
                             cnx = pyx.connector.curve(bxvt, bxdt, absangle1=0, absangle2=90)  # noqa: E501
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        log_runtime.error(f'Error creating connector: {e}')
                     else:
                         canvas.stroke(cnx, [pyx.style.linewidth.thin, pyx.deco.earrow.small, col])  # noqa: E501
 
@@ -1064,6 +1079,8 @@ class Packet(
         :param str s: the raw layer
         """
         if s:
+            if s is None:
+                raise ValueError('Raw layer cannot be None')
             if (
                 self.stop_dissection_after and
                 isinstance(self, self.stop_dissection_after)
@@ -1253,6 +1270,8 @@ class Packet(
                 return False
             if self.getfieldval(f.name) != other.getfieldval(f.name):
                 return False
+        if self.payload is None or other.payload is None:
+            raise ValueError('Payload cannot be None')
         return self.payload == other.payload
 
     def __ne__(self, other):
@@ -1712,6 +1731,8 @@ values.
     def lastlayer(self, layer=None):
         # type: (Optional[Packet]) -> Packet
         """Returns the uppest layer of the packet"""
+        if self.payload is None:
+            raise ValueError('Payload cannot be None')
         return self.payload.lastlayer(self)
 
     def decode_payload_as(self, cls):
@@ -1788,6 +1809,8 @@ values.
             self.__class__.__name__,
             ", ".join("%s=%s" % x for x in self._command())
         )
+        if self.payload is None:
+            raise ValueError('Payload cannot be None')
         pc = self.payload.command()
         if pc:
             c += "/" + pc
@@ -1803,6 +1826,8 @@ values.
         This must only be used for a grepping/displaying purpose.
         """
         dump = json.dumps({k: v for (k, v) in self._command(json=True)})
+        if self.payload is None:
+            raise ValueError('Payload cannot be None')
         pc = self.payload.json()
         if pc:
             dump = dump[:-1] + ", \"payload\": %s}" % pc
@@ -2032,6 +2057,8 @@ class Padding(Raw):
 
     def build_padding(self):
         # type: () -> bytes
+        if self.payload is None:
+            raise ValueError('Payload cannot be None')
         return (
             bytes_encode(self.load) if self.raw_packet_cache is None
             else self.raw_packet_cache
@@ -2378,7 +2405,7 @@ def _pkt_ls(obj,  # type: Union[Packet, Type[Packet]]
     """
     is_pkt = isinstance(obj, Packet)
     if not issubtype(obj, Packet) and not is_pkt:
-        raise ValueError
+        raise ValueError('Object must be a subclass of Packet')
     fields = []
     for f in obj.fields_desc:
         cur_fld = f
@@ -2533,6 +2560,8 @@ def rfc(cls, ret=False, legend=True):
     lines = []
     # Get the size (width) that a field will take
     # when formatted, from its length in bits
+    if cur_len < 0:
+        raise ValueError('Current length cannot be negative')
     clsize = lambda x: 2 * x - 1  # type: Callable[[int], int]
     ident = 0  # Fields UUID
 
@@ -2647,6 +2676,8 @@ def fuzz(p,  # type: _P
 
     :param p: the Packet instance to fuzz
     :return: the fuzzed packet.
+    if not isinstance(p, Packet):
+        raise ValueError('p must be a valid Packet instance')
     """
     if not _inplace:
         p = p.copy()
