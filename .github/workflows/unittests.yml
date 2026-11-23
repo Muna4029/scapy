@@ -107,7 +107,7 @@ jobs:
           installmode: libpcap
           flags: ' -K scanner'
           # macOS tests
-        - os: macos-14
+        - os: macos-15-intel
           python: '3.13'
           mode: both
           flags: ' -K scanner'
@@ -126,7 +126,7 @@ jobs:
           python: pypy3.10
           mode: root
           flags: ' -k scanner'
-        - os: macos-14
+        - os: macos-15-intel
           python: '3.13'
           mode: both
           allow-failure: 'true'
